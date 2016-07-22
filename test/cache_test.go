@@ -27,6 +27,26 @@ func Test_TagCache(t *testing.T) {
 
 	t.Log("ok")
 
+	err = c.Set("dada", "weisd=dada", 300)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.MSet(map[string]string{"da1": "weisd1", "dada1": "weisd=dada1"}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vals := []string{"weisd1", "weisd=dada1"}
+
+	ress := c.MGet([]string{"da1", "dada1"})
+
+	for i, _ := range ress {
+		if ress[i] != vals[i] {
+			t.Fatal(err)
+		}
+	}
+
 	// use tags/namespace
 	err = c.Tags([]string{"dd"}).Set("da", "weisd", 300)
 	if err != nil {
