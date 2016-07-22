@@ -19,24 +19,24 @@ func (this *TagCache) Set(key, value string, expire int64) error {
 	return this.store.Set(this.TaggedItemKey(key), value, expire)
 }
 
-func (this *TagCache) MSet(items map[string]string, expire int64) error {
-	m := map[string]string{}
-	for k, _ := range items {
-		m[this.TaggedItemKey(k)] = items[k]
-	}
-	return this.store.MSet(m, expire)
-}
+// func (this *TagCache) MSet(items map[string]string, expire int64) error {
+// 	m := map[string]string{}
+// 	for k, _ := range items {
+// 		m[this.TaggedItemKey(k)] = items[k]
+// 	}
+// 	return this.store.MSet(m, expire)
+// }
 
 func (this *TagCache) Get(key string) string {
 	return this.store.Get(this.TaggedItemKey(key))
 }
 
-func (this *TagCache) MGet(keys []string) []string {
-	for i, _ := range keys {
-		keys[i] = this.TaggedItemKey(keys[i])
-	}
-	return this.store.MGet(keys)
-}
+// func (this *TagCache) MGet(keys []string) []string {
+// 	for i, _ := range keys {
+// 		keys[i] = this.TaggedItemKey(keys[i])
+// 	}
+// 	return this.store.MGet(keys)
+// }
 
 // 更新过期时间
 func (this *TagCache) Touch(key string, expire int64) error {

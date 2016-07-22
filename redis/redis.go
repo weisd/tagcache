@@ -12,6 +12,7 @@ import (
 var _ tagcache.CacheStore = new(RedisCache)
 
 var DefualtPrefix = "tc"
+var DefualtExpire int64 = 3600 // 默认一个小时
 
 func init() {
 	tagcache.Register("redis", &RedisCache{})
@@ -70,54 +71,75 @@ func (r *RedisCache) Set(key, val string, timeout int64) (err error) {
 	return
 }
 
-func (r *RedisCache) MSet(items map[string]string, timeout int64) (err error) {
-	if timeout == 0 {
-		args := make([]interface{}, 0, len(items)*2)
-		for k, _ := range items {
-			args = append(args, r.key(k), items[k])
-		}
-		_, err = r.do("MSET", args...)
-		return
-	}
+// func (r *RedisCache) MSet(items map[string]string, timeout int64) (err error) {
+// 	if timeout == 0 {
+// 		args := make([]interface{}, 0, len(items)*2)
+// 		for k, _ := range items {
+// 			args = append(args, r.key(k), items[k])
+// 		}
+// 		_, err = r.do("MSET", args...)
+// 		return
+// 	}
+
+// 	c := r.pool.Get()
+// 	defer c.Close()
+
+// 	for k, _ := range items {
+// 		c.Send("SETEX", r.key(k), timeout, items[k])
+// 	}
+
+// 	return c.Flush()
+// }
+
+// func (r *RedisCache) Forever(key, val string) (err error) {
+// 	_, err = r.do("SET", r.key(key), val)
+// 	return
+// }
+
+func (r *RedisCache) Get(key string) string {
 
 	c := r.pool.Get()
 	defer c.Close()
 
-	for k, _ := range items {
-		c.Send("SETEX", r.key(k), timeout, items[k])
+	c.Send("GET", r.key(key))
+	c.Send("TTL", r.key(key))
+
+	err := c.Flush()
+	if err != nil {
+		return ""
 	}
 
-	return c.Flush()
-}
+	v, _ := redigo.String(c.Receive())
+	ttl, _ := redigo.Int64(c.Receive())
 
-func (r *RedisCache) Forever(key, val string) (err error) {
-	_, err = r.do("SET", r.key(key), val)
-	return
-}
-
-func (r *RedisCache) Get(key string) string {
-	v, _ := redigo.String(r.do("GET", r.key(key)))
-	// 有值，自动添加过期时间
-	if len(v) > 0 {
-
+	if ttl > 0 && ttl < DefualtExpire {
+		r.Touch(key, DefualtExpire+ttl)
 	}
+
 	return v
+
+	// v, _ := redigo.String(r.do("GET", r.key(key)))
+	// // 有值，自动添加过期时间
+	// if len(v) > 0 {
+
+	// }
+	// return v
 }
 
-func (r *RedisCache) MGet(keys []string) []string {
-	args := make([]interface{}, len(keys))
+// func (r *RedisCache) MGet(keys []string) []string {
+// 	args := make([]interface{}, len(keys))
 
-	for i, _ := range keys {
-		args[i] = r.key(keys[i])
-	}
+// 	for i, _ := range keys {
+// 		args[i] = r.key(keys[i])
+// 	}
 
-	v, _ := redigo.Strings(r.do("MGET", args...))
-	// 有值，自动添加过期时间
-	if len(v) > 0 {
+// 	v, _ := redigo.Strings(r.do("MGET", args...))
+// 	// 有值，自动添加过期时间
+// 	if len(v) > 0 {
 
-	}
-	return v
-}
+// 	}
+// 	return v
+// }
 
 // Delete deletes cached value by given key.
 func (r *RedisCache) Delete(key string) (err error) {

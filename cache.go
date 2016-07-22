@@ -16,11 +16,11 @@ var _ Cache = new(Engine)
 type CacheStore interface {
 	// Set Sets value into cache with key and expire time.
 	Set(key, val string, timeout int64) error
-	MSet(items map[string]string, timeout int64) error
+	// MSet(items map[string]string, timeout int64) error
 	// Get gets cached value by given key.
 	Get(key string) string
 	// Get Multi keys
-	MGet(keys []string) []string
+	// MGet(keys []string) []string
 	// Delete deletes cached value by given key.
 	Delete(key string) error
 	// Incr increases cached int-type value by given key as a counter.
@@ -72,17 +72,17 @@ func (this *Engine) Set(key, val string, timeout int64) error {
 	return this.store.Set(key, val, timeout)
 }
 
-func (this *Engine) MSet(items map[string]string, timeout int64) error {
-	return this.store.MSet(items, timeout)
-}
+// func (this *Engine) MSet(items map[string]string, timeout int64) error {
+// 	return this.store.MSet(items, timeout)
+// }
 
 func (this *Engine) Get(key string) string {
 	return this.store.Get(key)
 }
 
-func (this *Engine) MGet(keys []string) []string {
-	return this.store.MGet(keys)
-}
+// func (this *Engine) MGet(keys []string) []string {
+// 	return this.store.MGet(keys)
+// }
 
 func (this *Engine) Delete(key string) error {
 	return this.store.Delete(key)
