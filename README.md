@@ -1,30 +1,22 @@
-# cache
+# tagcache
 
 
 ## import
 ```
-	"github.com/weisd/cache"
-	_ "github.com/weisd/cache/redis"
+	"github.com/weisd/tagcache"
+	_ "github.com/weisd/tagcache/redis"
 
 ```
 
 ## Documentation
 ```
-package cache
-
-import (
-	"testing"
-)
-
-func Test_TagCache(t *testing.T) {
-
-	c, err := New(Options{Adapter: "memory"})
+	c, err := tagcache.New(tagcache.Options{Adapter: "redis", AdapterConfig: `{"Addr":"127.0.0.1:6379"}`, Section: "dada"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// base use
-	err = c.Put("da", "weisd", 300)
+	err = c.Set("da", "weisd", 300)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,25 +24,25 @@ func Test_TagCache(t *testing.T) {
 	res := c.Get("da")
 
 	if res != "weisd" {
-		t.Fatal("base put faield")
+		t.Fatal("base Set faield")
 	}
 
 	t.Log("ok")
 
 	// use tags/namespace
-	err = c.Tags([]string{"dd"}).Put("da", "weisd", 300)
+	err = c.Tags([]string{"dd"}).Set("da", "weisd", 300)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res = c.Tags([]string{"dd"}).Get("da")
 
 	if res != "weisd" {
-		t.Fatal("tags put faield")
+		t.Fatal("tags Set faield")
 	}
 
 	t.Log("ok")
 
-	err = c.Tags([]string{"aa"}).Put("aa", "aaa", 300)
+	err = c.Tags([]string{"aa"}).Set("aa", "aaa", 300)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,6 +55,19 @@ func Test_TagCache(t *testing.T) {
 
 	t.Log("ok")
 
+	err = c.Tags([]string{"aa", "cc"}).Set("cc", "dada", 300)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res = c.Tags([]string{"aa", "cc"}).Get("cc")
+
+	if res != "dada" {
+		t.Fatal("not aaa")
+	}
+
+	t.Log("ok")
+
 	// flush namespace
 	err = c.Tags([]string{"aa"}).Flush()
 	if err != nil {
@@ -70,6 +75,11 @@ func Test_TagCache(t *testing.T) {
 	}
 
 	res = c.Tags([]string{"aa"}).Get("aa")
+	if res != "" {
+		t.Fatal("flush faield")
+	}
+
+	res = c.Tags([]string{"aa", "cc"}).Get("cc")
 	if res != "" {
 		t.Fatal("flush faield")
 	}
@@ -87,31 +97,7 @@ func Test_TagCache(t *testing.T) {
 
 	t.Log("ok")
 
-}
-```
-
-
-## echo Middleware
-```
-e := echo.New()
-e.Use(cache.EchoCacher(cache.Options{Adapter: "redis", AdapterConfig: `{"Addr":":6379"}`, Section: "test", Interval: 5}))
-
-e.Get("/test/cache/put", func(c *echo.Context) error {
-	err := cache.Store(c).Put("name", "weisd", 10)
-	if err != nil {
-		return err
-	}
-
-	return c.String(200, "store ok")
-})
-
-e.Get("/test/cache/get", func(c *echo.Context) error {
-	name := cache.Store(c).Get("name")
-
-	return c.String(200, "get name %s", name)
-})
-
-e.Run(":1323")
+	// c.Flush()
 
 ```
 
