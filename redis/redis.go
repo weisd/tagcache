@@ -3,19 +3,53 @@ package redis
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	redigo "github.com/garyburd/redigo/redis"
 	"github.com/weisd/tagcache"
 )
 
-var _ tagcache.CacheStore = new(RedisCache)
+var _ tagcache.StoreFactory = &RedisStoreFactory{}
 
 var DefualtPrefix = "tc"
 var DefualtExpire int64 = 3600 // 默认一个小时
 
 func init() {
-	tagcache.Register("redis", &RedisCache{})
+	tagcache.Register("redis", newRedisStoreFactory())
+}
+
+type RedisStoreFactory struct {
+	stores map[string]*RedisCache
+	lock   *sync.RWMutex
+}
+
+func newRedisStoreFactory() tagcache.StoreFactory {
+	return &RedisStoreFactory{stores: map[string]*RedisCache{}, lock: new(sync.RWMutex)}
+}
+
+func (this *RedisStoreFactory) CreateStore(opt tagcache.Options) (tagcache.CacheStore, error) {
+	this.lock.RLock()
+	if store, has := this.stores[opt.AdapterConfig]; has {
+		this.lock.RUnlock()
+		return store, nil
+	}
+
+	this.lock.RUnlock()
+	this.lock.Lock()
+
+	store := &RedisCache{}
+
+	err := store.StartAndGC(opt)
+	if err != nil {
+		return nil, err
+	}
+
+	this.stores[opt.AdapterConfig] = store
+
+	this.lock.Unlock()
+
+	return store, nil
 }
 
 type RedisConfig struct {
@@ -46,6 +80,7 @@ func prepareConfig(conf RedisConfig) RedisConfig {
 type RedisCache struct {
 	pool   *redigo.Pool
 	prefix string
+	conf   RedisConfig
 }
 
 func (r *RedisCache) key(key string) string {
@@ -190,6 +225,7 @@ func (r *RedisCache) StartAndGC(opt tagcache.Options) error {
 	}
 
 	conf = prepareConfig(conf)
+	r.conf = conf
 
 	r.prefix = opt.Section
 	if len(r.prefix) == 0 {
@@ -197,6 +233,8 @@ func (r *RedisCache) StartAndGC(opt tagcache.Options) error {
 	}
 
 	r.pool = newRedisPool(conf)
+
+	fmt.Sprintf("redis StartAndGC %v \n", conf)
 
 	conn := r.pool.Get()
 
@@ -247,4 +285,8 @@ func (r *RedisCache) Touch(key string, expire int64) (err error) {
 		return
 	}
 	return nil
+}
+
+func (r *RedisCache) Info() string {
+	return fmt.Sprintf("%#v", r.conf)
 }

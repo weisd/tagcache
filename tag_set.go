@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type TagSet struct {
@@ -90,7 +91,11 @@ func (this *TagSet) GetNamespace() string {
 // 重置tagID 版本+1
 func (this *TagSet) ResetTag(name string) string {
 
-	seq, _ := this.store.Incr(this.TagKey(name))
+	seq, err := this.store.Incr(this.TagKey(name))
+
+	if name == "getFollowUidCacheTag:uid1385217469" {
+		fmt.Printf("%v ResetTag name %s, seq %d, redis:%s, err %v ", time.Now(), name, seq, this.store.Info(), err)
+	}
 
 	// redis 起过最大值不会归零
 	if seq > (math.MaxInt64 - 10) {
@@ -103,5 +108,8 @@ func (this *TagSet) ResetTag(name string) string {
 
 // Tag key
 func (this *TagSet) TagKey(name string) string {
+	if name == "getFollowUidCacheTag:uid1385217469" {
+		fmt.Printf("%v ResetTag TagKey redis:%s, ", time.Now(), this.store.Info())
+	}
 	return fmt.Sprintf("tag:%s:key", name)
 }

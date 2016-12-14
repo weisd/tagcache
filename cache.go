@@ -33,6 +33,12 @@ type CacheStore interface {
 	StartAndGC(opt Options) error
 	// update expire time
 	Touch(key string, expire int64) error
+
+	Info() string
+}
+
+type StoreFactory interface {
+	CreateStore(opt Options) (CacheStore, error)
 }
 
 type Cache interface {
@@ -56,11 +62,16 @@ func New(opt Options) (Cache, error) {
 		return nil, fmt.Errorf("cache: unknown adapter '%s'(forgot to import?)", opt.Adapter)
 	}
 
+	store, err := adapter.CreateStore(opt)
+	if err != nil {
+		return nil, fmt.Errorf("adapter.CreateStore err %v", err)
+	}
+
 	engine := &Engine{}
 	engine.Opt = opt
-	engine.store = adapter
+	engine.store = store
 
-	return engine, adapter.StartAndGC(opt)
+	return engine, nil
 }
 
 type Engine struct {
@@ -112,10 +123,14 @@ func (this *Engine) Tags(tags []string) Cache {
 	return NewTagCache(this.store, tags...)
 }
 
-var adapters = make(map[string]CacheStore)
+func (this *Engine) Info() string {
+	return this.store.Info()
+}
+
+var adapters = make(map[string]StoreFactory)
 
 // Register registers a adapter.
-func Register(name string, adapter CacheStore) {
+func Register(name string, adapter StoreFactory) {
 	if adapter == nil {
 		panic("cache: cannot register adapter with nil value")
 	}

@@ -68,3 +68,7 @@ func (this *TagCache) Tags(tags []string) Cache {
 func (this *TagCache) StartAndGC(opt Options) error {
 	return this.store.StartAndGC(opt)
 }
+
+func (this *TagCache) Info() string {
+	return this.store.Info()
+}
